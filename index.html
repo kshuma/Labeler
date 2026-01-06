@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thermal Label Creator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <title>Thermal Label Creator (PDF)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary: #2563eb; --bg: #f8fafc; --secondary: #64748b; }
         body { font-family: system-ui, sans-serif; margin: 20px; background: var(--bg); padding-bottom: 50px; }
@@ -21,7 +21,7 @@
         .history-card { background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid var(--primary); display: flex; justify-content: space-between; align-items: center; }
         .load-btn { width: auto; padding: 8px 15px; font-size: 14px; background: var(--secondary); margin: 0; color: white; }
 
-        /* Off-screen Label Template (102x152mm) */
+        /* Hidden Template (102x152mm) */
         #label-to-export { 
             width: 102mm; height: 152mm; background: white; color: black;
             padding: 8mm; box-sizing: border-box; display: flex; flex-direction: column;
@@ -55,7 +55,7 @@
         <textarea id="contentsInput" rows="3"></textarea>
     </div>
 
-    <button class="btn-main" id="btnAction" onclick="generateAndShare()">Create & Share Label</button>
+    <button class="btn-main" id="btnAction" onclick="generatePDF()">Create & Save PDF</button>
 </div>
 
 <div class="history-section">
@@ -74,14 +74,13 @@
 </div>
 
 <script>
-    const defaultOwners = ["Kevin", "Jenn", "Andrew", "Max", "Christmas", "Easter", "Halloween", "Fall", "Thanksgiving"];
-    const defaultRooms = ["Living", "Kitchen", "Dining", "Bathroom", "Garage", "Bedroom", "Office", "Laundry"];
-
     let history = JSON.parse(localStorage.getItem('labelHistory') || '[]');
     let customOwners = JSON.parse(localStorage.getItem('customOwners') || '[]');
     let customRooms = JSON.parse(localStorage.getItem('customRooms') || '[]');
 
     function updateDatalists() {
+        const defaultOwners = ["Kevin", "Jenn", "Andrew", "Max", "Christmas", "Easter", "Halloween", "Fall", "Thanksgiving"];
+        const defaultRooms = ["Living", "Kitchen", "Dining", "Bathroom", "Garage", "Bedroom", "Office", "Laundry"];
         document.getElementById('owners').innerHTML = [...new Set([...defaultOwners, ...customOwners])].map(o => `<option value="${o}">`).join('');
         document.getElementById('rooms').innerHTML = [...new Set([...defaultRooms, ...customRooms])].map(r => `<option value="${r}">`).join('');
     }
@@ -99,51 +98,51 @@
         });
     }
 
-    async function generateAndShare() {
+    async function generatePDF() {
         const btn = document.getElementById('btnAction');
-        btn.innerText = "Processing...";
+        btn.innerText = "Generating PDF...";
         btn.disabled = true;
 
         const owner = document.getElementById('ownerInput').value || 'STORAGE';
         const room = document.getElementById('roomInput').value || 'GENERAL';
         
-        // Save Customs
-        if(!defaultOwners.includes(owner) && !customOwners.includes(owner)) { customOwners.push(owner); localStorage.setItem('customOwners', JSON.stringify(customOwners)); }
-        if(!defaultRooms.includes(room) && !customRooms.includes(room)) { customRooms.push(room); localStorage.setItem('customRooms', JSON.stringify(customRooms)); }
+        // Save New Customs to History
+        if(!customOwners.includes(owner)) { customOwners.push(owner); localStorage.setItem('customOwners', JSON.stringify(customOwners)); }
+        if(!customRooms.includes(room)) { customRooms.push(room); localStorage.setItem('customRooms', JSON.stringify(customRooms)); }
         updateDatalists();
 
         const boxNum = history.filter(item => item.owner === owner && item.room === room).length + 1;
         
-        // Populate Hidden Template
+        // Populate Template
         document.getElementById('out-owner').innerText = owner;
         document.getElementById('out-room').innerText = room;
         document.getElementById('out-contents').innerText = document.getElementById('contentsInput').value;
         document.getElementById('out-number').innerText = "#" + boxNum;
         document.getElementById('out-fragile').style.display = document.getElementById('fragileCheck').checked ? 'block' : 'none';
 
-        // Convert to Image
-        const canvas = await html2canvas(document.getElementById('label-to-export'), { scale: 3 });
-        
-        canvas.toBlob(async (blob) => {
-            const file = new File([blob], `Label-${owner}-${boxNum}.png`, { type: "image/png" });
+        const element = document.getElementById('label-to-export');
+        const opt = {
+            margin: 0,
+            filename: `Label-${owner}-${boxNum}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 3 },
+            jsPDF: { unit: 'mm', format: [102, 152], orientation: 'portrait' }
+        };
+
+        // Generate and automatically trigger download on iPhone
+        try {
+            await html2pdf().set(opt).from(element).save();
             
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({ files: [file], title: 'Label' });
-                    // Only save to history if sharing was successful
-                    history.push({owner, room, boxNum, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked});
-                    localStorage.setItem('labelHistory', JSON.stringify(history));
-                    renderHistory();
-                } catch (err) {
-                    console.log("Share cancelled or failed");
-                }
-            } else {
-                alert("Browser does not support sharing files.");
-            }
-            
-            btn.innerText = "Create & Share Label";
-            btn.disabled = false;
-        }, 'image/png');
+            // Update History
+            history.push({owner, room, boxNum, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked});
+            localStorage.setItem('labelHistory', JSON.stringify(history));
+            renderHistory();
+        } catch (e) {
+            alert("Error creating PDF. Try again.");
+        }
+
+        btn.innerText = "Create & Save PDF";
+        btn.disabled = false;
     }
 
     function loadLabel(idx) {
