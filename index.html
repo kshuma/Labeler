@@ -3,154 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Labeler</title>
+    <title>Modern Box Labeler</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --primary: #000; --bg: #f8fafc; }
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
+        :root { --primary: #000; --bg: #f4f4f5; }
+        body { font-family: -apple-system, Helvetica, Arial, sans-serif; margin: 15px; background: var(--bg); color: #18181b; }
         
-        /* Layout Containers */
-        .app-container { max-width: 500px; margin: auto; padding: 20px; }
-        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        
-        /* Form */
+        .form-container { max-width: 450px; margin: auto; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .field { margin-bottom: 16px; }
-        label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; color: #64748b; }
-        input, textarea { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; box-sizing: border-box; }
+        label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; color: #71717a; }
+        input, textarea { width: 100%; padding: 14px; border: 2px solid #e4e4e7; border-radius: 10px; font-size: 16px; box-sizing: border-box; }
+        
         button { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: 700; cursor: pointer; }
-        .btn-main { background: #000; color: white; margin-top: 10px; }
+        .btn-main { background: #18181b; color: white; margin-top: 8px; }
 
-        /* THE PHYSICAL LABEL (102x152mm) */
-        .preview-wrapper { display: flex; justify-content: center; margin: 30px 0; }
+        /* THE LABEL (Sized exactly for 102x152mm) */
+        .preview-wrapper { display: flex; justify-content: center; margin: 20px 0; }
         #label-to-export { 
             width: 102mm; height: 152mm; background: white; color: black;
             padding: 10mm; box-sizing: border-box; display: flex; flex-direction: column;
-            border: 1px solid #000; text-align: left;
+            border: 1px solid #000;
         }
-        .label-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 8px solid black; padding-bottom: 8px; }
-        .owner-text { font-size: 34px; font-weight: 900; text-transform: uppercase; }
-        .box-num-text { font-size: 20px; font-weight: 700; color: #444; }
-        .room-text { font-size: 48px; font-weight: 900; text-transform: uppercase; margin: 15px 0 10px 0; line-height: 1; }
-        .content-area { display: flex; gap: 15px; flex-grow: 1; margin-top: 10px; overflow: hidden; }
-        #qrcode { width: 35mm; height: 35mm; flex-shrink: 0; }
-        .contents-list { font-size: 18px; line-height: 1.2; font-weight: 500; }
-        .fragile-footer { background: black; color: white; text-align: center; font-size: 52px; font-weight: 900; padding: 10px 0; margin-top: auto; }
-
-        /* SCAN VIEW (MANIFEST) */
-        #scan-view { display: none; padding: 40px 20px; text-align: center; }
-        .manifest-data { text-align: left; background: #f1f5f9; padding: 20px; border-radius: 12px; margin: 20px 0; }
         
-        @media (max-width: 500px) { .preview-wrapper { transform: scale(0.65); transform-origin: top center; height: 105mm; } }
+        .label-top-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 8px solid black; padding-bottom: 8px; }
+        #out-owner { font-size: 34px; font-weight: 900; text-transform: uppercase; }
+        #out-number { font-size: 20px; font-weight: 700; }
+
+        .label-room-label { font-size: 14px; font-weight: 800; margin-top: 15px; text-transform: uppercase; }
+        #out-room { font-size: 48px; font-weight: 900; text-transform: uppercase; line-height: 1; margin-bottom: 10px; }
+
+        .content-layout { display: flex; gap: 15px; flex-grow: 1; align-items: flex-start; margin-top: 10px; overflow: hidden; }
+        #qrcode { width: 35mm; height: 35mm; flex-shrink: 0; background: white; }
+        
+        .contents-box { flex-grow: 1; font-size: 18px; line-height: 1.2; overflow: hidden; }
+        .contents-header { font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
+        #out-contents { font-weight: 500; word-break: break-word; }
+
+        .fragile-banner { background: black; color: white; text-align: center; font-size: 52px; font-weight: 900; padding: 10px 0; margin-top: auto; }
+
+        /* HISTORY */
+        .history-section { max-width: 450px; margin: 20px auto; }
+        .history-card { background: white; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .load-btn { width: auto; padding: 6px 12px; background: #e4e4e7; font-size: 13px; }
+
+        /* Mobile Shrink (Visual Only) */
+        @media (max-width: 500px) {
+            .preview-wrapper { transform: scale(0.7); transform-origin: top center; height: 110mm; }
+        }
     </style>
 </head>
 <body>
 
-<div id="editor-view" class="app-container">
-    <div class="card">
-        <div class="field"><label>Owner / Event</label><input list="owners" id="ownerIn" oninput="update()"><datalist id="owners"></datalist></div>
-        <div class="field"><label>Room</label><input list="rooms" id="roomIn" oninput="update()"><datalist id="rooms"></datalist></div>
-        <div class="field" style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="fragileIn" onchange="update()"><label style="margin:0">Fragile</label></div>
-        <div class="field"><label>Contents</label><textarea id="contentIn" rows="2" oninput="update()"></textarea></div>
-        <button class="btn-main" id="saveBtn" onclick="savePDF()">Download PDF Label</button>
+<div class="form-container">
+    <div class="field">
+        <label>Owner / Event</label>
+        <input list="owners" id="ownerInput" oninput="updatePreview()">
+        <datalist id="owners"></datalist>
     </div>
+    <div class="field">
+        <label>Room</label>
+        <input list="rooms" id="roomInput" oninput="updatePreview()">
+        <datalist id="rooms"></datalist>
+    </div>
+    <div class="field" style="display:flex; align-items:center; gap:12px; padding: 5px 0;">
+        <input type="checkbox" id="fragileCheck" style="width:24px; height:24px;" onchange="updatePreview()">
+        <label for="fragileCheck" style="margin:0; color: #18181b;">MARK AS FRAGILE</label>
+    </div>
+    <div class="field">
+        <label>Contents</label>
+        <textarea id="contentsInput" rows="2" oninput="updatePreview()"></textarea>
+    </div>
+    <button class="btn-main" id="btnAction" onclick="generatePDF()">Create & Save PDF</button>
+</div>
 
-    <div class="preview-wrapper">
-        <div id="label-to-export">
-            <div class="label-header"><span id="outOwner" class="owner-text">KEVIN</span><span id="outNum" class="box-num-text">#1</span></div>
-            <div style="font-size:12px; font-weight:800; margin-top:15px;">ROOM:</div>
-            <div id="outRoom" class="room-text">KITCHEN</div>
-            <div class="content-area">
-                <div id="qrcode"></div>
-                <div class="contents-list"><strong>CONTENTS:</strong><br><span id="outContent">...</span></div>
-            </div>
-            <div id="outFragile" class="fragile-footer">FRAGILE</div>
+<div class="preview-wrapper">
+    <div id="label-to-export">
+        <div class="label-top-row">
+            <span id="out-owner">OWNER</span>
+            <span id="out-number">#1</span>
         </div>
+        <div class="label-room-label">ROOM:</div>
+        <div id="out-room">KITCHEN</div>
+        <div class="content-layout">
+            <div id="qrcode"></div>
+            <div class="contents-box">
+                <div class="contents-header">CONTENTS:</div>
+                <div id="out-contents">Items here...</div>
+            </div>
+        </div>
+        <div id="out-fragile" class="fragile-banner">FRAGILE</div>
     </div>
 </div>
 
-<div id="scan-view" class="app-container">
-    <div class="card">
-        <h1 id="scanTitle">BOX #1</h1>
-        <div class="manifest-data">
-            <p><strong>OWNER:</strong> <span id="sOwner"></span></p>
-            <p><strong>ROOM:</strong> <span id="sRoom"></span></p>
-            <hr>
-            <p><strong>CONTENTS:</strong></p>
-            <p id="sContent"></p>
-        </div>
-        <button class="btn-main" onclick="window.location.href='https://kshuma.github.io/Labeler/'">Create New Label</button>
-    </div>
+<div class="history-section">
+    <div id="history-list"></div>
+    <button style="background:none; color:#ef4444; font-size:12px; margin-top:20px;" onclick="localStorage.clear(); location.reload();">Clear All Data</button>
 </div>
 
 <script>
     let history = JSON.parse(localStorage.getItem('labelHistory') || '[]');
     let customOwners = JSON.parse(localStorage.getItem('customOwners') || '[]');
     let customRooms = JSON.parse(localStorage.getItem('customRooms') || '[]');
-    let qr = new QRCode(document.getElementById("qrcode"), { width: 130, height: 130 });
+    
+    // Initialize QR code once
+    const qrcodeContainer = document.getElementById("qrcode");
+    let qr = new QRCode(qrcodeContainer, { width: 132, height: 132, correctLevel : QRCode.CorrectLevel.M });
 
-    // ROUTING: Editor vs Scan View
-    const p = new URLSearchParams(window.location.search);
-    if(p.has('c')) {
-        document.getElementById('editor-view').style.display = 'none';
-        document.getElementById('scan-view').style.display = 'block';
-        document.getElementById('scanTitle').innerText = "BOX #" + p.get('b');
-        document.getElementById('sOwner').innerText = p.get('o');
-        document.getElementById('sRoom').innerText = p.get('r');
-        document.getElementById('sContent').innerText = p.get('c');
+    function updateDatalists() {
+        const defaults = {
+            owners: ["Kevin", "Jenn", "Andrew", "Max", "Christmas", "Easter", "Halloween", "Fall", "Thanksgiving"],
+            rooms: ["Living", "Kitchen", "Dining", "Bathroom", "Garage", "Bedroom", "Office", "Laundry"]
+        };
+        document.getElementById('owners').innerHTML = [...new Set([...defaults.owners, ...customOwners])].map(o => `<option value="${o}">`).join('');
+        document.getElementById('rooms').innerHTML = [...new Set([...defaults.rooms, ...customRooms])].map(r => `<option value="${r}">`).join('');
     }
 
-    function update() {
-        const o = document.getElementById('ownerIn').value || 'OWNER';
-        const r = document.getElementById('roomIn').value || 'ROOM';
-        const c = document.getElementById('contentIn').value || '...';
-        const b = history.filter(x => x.o.toLowerCase() === o.toLowerCase() && x.r.toLowerCase() === r.toLowerCase()).length + 1;
+    function updatePreview() {
+        const owner = document.getElementById('ownerInput').value || 'OWNER';
+        const room = document.getElementById('roomInput').value || 'ROOM';
+        const contents = document.getElementById('contentsInput').value || 'Empty box';
+        const boxNum = history.filter(item => item.owner.toLowerCase() === owner.toLowerCase() && item.room.toLowerCase() === room.toLowerCase()).length + 1;
 
-        document.getElementById('outOwner').innerText = o;
-        document.getElementById('outRoom').innerText = r;
-        document.getElementById('outContent').innerText = c;
-        document.getElementById('outNum').innerText = "#" + b;
-        document.getElementById('outFragile').style.display = document.getElementById('fragileIn').checked ? 'block' : 'none';
-
-        const url = `https://kshuma.github.io/Labeler/?o=${encodeURIComponent(o)}&r=${encodeURIComponent(r)}&b=${b}&c=${encodeURIComponent(c)}`;
-        qr.makeCode(url);
-    }
-
-    async function savePDF() {
-        const btn = document.getElementById('saveBtn');
-        btn.innerText = "Generating...";
+        document.getElementById('out-owner').innerText = owner;
+        document.getElementById('out-room').innerText = room;
+        document.getElementById('out-contents').innerText = contents;
+        document.getElementById('out-number').innerText = "BOX #" + boxNum;
+        document.getElementById('out-fragile').style.display = document.getElementById('fragileCheck').checked ? 'block' : 'none';
         
-        const o = document.getElementById('ownerIn').value;
-        const r = document.getElementById('roomIn').value;
-        const c = document.getElementById('contentIn').value;
-        const b = document.getElementById('outNum').innerText.replace('#','');
+        qr.makeCode(contents);
+    }
 
-        if(o && !customOwners.includes(o)) { customOwners.push(o); localStorage.setItem('customOwners', JSON.stringify(customOwners)); }
-        if(r && !customRooms.includes(r)) { customRooms.push(r); localStorage.setItem('customRooms', JSON.stringify(customRooms)); }
+    async function generatePDF() {
+        const btn = document.getElementById('btnAction');
+        btn.innerText = "Rendering...";
+        btn.disabled = true;
 
-        const opt = { 
-            margin: 0, filename: `Label-${o}-${b}.pdf`, 
-            html2canvas: { scale: 3, useCORS: true }, 
-            jsPDF: { unit: 'mm', format: [102, 152], orientation: 'portrait' } 
+        const owner = document.getElementById('ownerInput').value || 'OWNER';
+        const room = document.getElementById('roomInput').value || 'ROOM';
+        
+        if(owner && !customOwners.includes(owner)) { customOwners.push(owner); localStorage.setItem('customOwners', JSON.stringify(customOwners)); }
+        if(room && !customRooms.includes(room)) { customRooms.push(room); localStorage.setItem('customRooms', JSON.stringify(customRooms)); }
+        
+        updatePreview();
+
+        const element = document.getElementById('label-to-export');
+        const opt = {
+            margin: 0,
+            filename: `Box-${owner}-${room}.pdf`,
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { 
+                scale: 3, 
+                useCORS: true, 
+                letterRendering: true,
+                scrollX: 0,
+                scrollY: 0
+            },
+            jsPDF: { unit: 'mm', format: [102, 152], orientation: 'portrait' }
         };
 
+        // Delay helps iPhone Safari capture everything correctly
         setTimeout(() => {
-            html2pdf().set(opt).from(document.getElementById('label-to-export')).save().then(() => {
-                history.push({o, r, c, b});
+            html2pdf().set(opt).from(element).save().then(() => {
+                history.push({owner, room, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked, boxNum: document.getElementById('out-number').innerText});
                 localStorage.setItem('labelHistory', JSON.stringify(history));
-                btn.innerText = "Download PDF Label";
-                location.reload(); // Refresh to update datalists and box numbers
+                renderHistory();
+                btn.innerText = "Create & Save PDF";
+                btn.disabled = false;
+            }).catch(err => {
+                alert("Error. Please try again.");
+                btn.disabled = false;
             });
         }, 800);
     }
 
-    // Load Dropdowns
-    const defO = ["Kevin", "Jenn", "Christmas", "Andrew", "Max"];
-    const defR = ["Kitchen", "Garage", "Living", "Bedroom", "Office", "Storage"];
-    document.getElementById('owners').innerHTML = [...new Set([...defO, ...customOwners])].map(x => `<option value="${x}">`).join('');
-    document.getElementById('rooms').innerHTML = [...new Set([...defR, ...customRooms])].map(x => `<option value="${x}">`).join('');
-    
-    update();
+    function renderHistory() {
+        const list = document.getElementById('history-list');
+        list.innerHTML = history.length === 0 ? '' : '<h3 style="font-size:12px; color:#71717a; text-transform:uppercase;">Recent</h3>';
+        history.slice().reverse().slice(0, 5).forEach((item, index) => {
+            const realIdx = history.length - 1 - index;
+            const div = document.createElement('div');
+            div.className = 'history-card';
+            div.innerHTML = `<div><strong>${item.owner}</strong><br><small>${item.room}</small></div>
+                             <button class="load-btn" onclick="loadLabel(${realIdx})">Reuse</button>`;
+            list.appendChild(div);
+        });
+    }
+
+    function loadLabel(idx) {
+        const item = history[idx];
+        document.getElementById('ownerInput').value = item.owner;
+        document.getElementById('roomInput').value = item.room;
+        document.getElementById('contentsInput').value = item.contents;
+        document.getElementById('fragileCheck').checked = item.fragile;
+        updatePreview();
+    }
+
+    updateDatalists();
+    renderHistory();
+    updatePreview();
 </script>
 </body>
 </html>
