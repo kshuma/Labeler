@@ -74,7 +74,7 @@
         <label>Contents</label>
         <textarea id="contentsInput" rows="2" oninput="updatePreview()"></textarea>
     </div>
-    <button class="btn-main" id="btnAction" onclick="generatePDF()">Create & Save PDF</button>
+    <button class="btn-main" id="btnAction" onclick="generatePDF()">Create & Open PDF</button>
 </div>
 
 <div class="preview-wrapper">
@@ -131,13 +131,12 @@
         document.getElementById('out-number').innerText = "BOX #" + boxNum;
         document.getElementById('out-fragile').style.display = document.getElementById('fragileCheck').checked ? 'block' : 'none';
         
-        // FIXED: QR code now only includes the contents text
         qr.makeCode(contents);
     }
 
     async function generatePDF() {
         const btn = document.getElementById('btnAction');
-        btn.innerText = "Rendering...";
+        btn.innerText = "Opening...";
         btn.disabled = true;
 
         const owner = document.getElementById('ownerInput').value || 'OWNER';
@@ -153,23 +152,20 @@
             margin: 0,
             filename: `Box-${owner}-${room}.pdf`,
             image: { type: 'jpeg', quality: 1 },
-            html2canvas: { 
-                scale: 3, 
-                useCORS: true, 
-                letterRendering: true,
-                scrollX: 0,
-                scrollY: 0
-            },
+            html2canvas: { scale: 3, useCORS: true, letterRendering: true, scrollX: 0, scrollY: 0 },
             jsPDF: { unit: 'mm', format: [102, 152], orientation: 'portrait' }
         };
 
-        // Delay helps iPhone Safari capture everything correctly
         setTimeout(() => {
-            html2pdf().set(opt).from(element).save().then(() => {
+            // CHANGE: Changed .save() to .output('bloburl') to open in a new tab
+            html2pdf().set(opt).from(element).output('bloburl').then((pdfUrl) => {
+                window.open(pdfUrl, '_blank');
+                
                 history.push({owner, room, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked, boxNum: document.getElementById('out-number').innerText});
                 localStorage.setItem('labelHistory', JSON.stringify(history));
                 renderHistory();
-                btn.innerText = "Create & Save PDF";
+                
+                btn.innerText = "Create & Open PDF";
                 btn.disabled = false;
             }).catch(err => {
                 alert("Error. Please try again.");
