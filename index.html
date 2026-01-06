@@ -3,86 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Labeler</title>
+    <title>Modern Box Labeler</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f1f5f9; }
-        body { font-family: -apple-system, sans-serif; margin: 15px; background: var(--bg); color: #1e293b; }
+        :root { --primary: #000; --bg: #f4f4f5; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 15px; background: var(--bg); color: #18181b; }
         
-        .form-container { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .field { margin-bottom: 12px; }
-        label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #64748b; }
-        input, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        /* Form Styling */
+        .form-container { max-width: 450px; margin: auto; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .field { margin-bottom: 16px; }
+        label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; }
+        input, textarea { width: 100%; padding: 14px; border: 2px solid #e4e4e7; border-radius: 10px; font-size: 16px; box-sizing: border-box; transition: border-color 0.2s; }
+        input:focus { outline: none; border-color: #2563eb; }
         
-        button { width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 18px; font-weight: 700; cursor: pointer; }
-        .btn-main { background: var(--primary); color: white; margin-top: 10px; }
-        .btn-danger { background: #ef4444; color: white; margin-top: 50px; font-size: 14px; padding: 10px; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: 700; cursor: pointer; transition: transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        .btn-main { background: #18181b; color: white; margin-top: 8px; }
 
-        /* PREVIEW AREA */
-        .preview-wrapper { display: flex; justify-content: center; margin: 25px 0; overflow: hidden; }
+        /* Modern Label Preview (102x152mm) */
+        .preview-wrapper { display: flex; justify-content: center; margin: 30px 0; }
         #label-to-export { 
             width: 102mm; height: 152mm; background: white; color: black;
-            padding: 8mm; box-sizing: border-box; display: flex; flex-direction: column;
-            border: 1px solid #000; position: relative;
+            padding: 10mm; box-sizing: border-box; display: flex; flex-direction: column;
+            position: relative; border: 1px solid #d4d4d8;
         }
-        .label-header { display: flex; justify-content: space-between; border-bottom: 8px solid black; padding-bottom: 5px; font-size: 32px; font-weight: 900; }
-        .label-room { font-size: 44px; font-weight: 800; margin: 15px 0; line-height: 1.1; word-wrap: break-word; }
-        .label-contents { font-size: 24px; flex-grow: 1; border: 4px solid black; padding: 12px; white-space: pre-wrap; overflow: hidden; }
-        .fragile-banner { background: black; color: white; text-align: center; font-size: 48px; font-weight: 900; padding: 10px; margin-top: 10px; }
+        
+        /* Top Row: Owner (Big) and Box # (Small) */
+        .label-top-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 6px solid black; padding-bottom: 8px; }
+        #out-owner { font-size: 32px; font-weight: 900; text-transform: uppercase; }
+        #out-number { font-size: 18px; font-weight: 700; color: #3f3f46; }
 
-        .history-section { max-width: 450px; margin: 30px auto; }
-        .history-card { background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid var(--primary); display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-        .load-btn { width: auto; padding: 8px 12px; background: #64748b; color: white; font-weight: 600; margin: 0; }
+        /* Room Section */
+        .label-room-label { font-size: 14px; font-weight: 800; margin-top: 15px; text-transform: uppercase; }
+        #out-room { font-size: 44px; font-weight: 800; text-transform: uppercase; line-height: 1; margin-bottom: 15px; }
 
-        @media (max-width: 500px) { #label-to-export { transform: scale(0.75); transform-origin: top center; margin-bottom: -40mm; } }
+        /* QR Code & Contents Row */
+        .content-layout { display: flex; gap: 15px; flex-grow: 1; align-items: flex-start; margin-top: 10px; }
+        #qrcode { width: 35mm; height: 35mm; flex-shrink: 0; }
+        #qrcode img { width: 35mm; height: 35mm; }
+        
+        .contents-box { flex-grow: 1; font-size: 18px; line-height: 1.3; }
+        .contents-header { font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
+        #out-contents { font-weight: 400; color: #18181b; }
+
+        /* Fragile Footer */
+        .fragile-banner { background: black; color: white; text-align: center; font-size: 52px; font-weight: 900; padding: 12px 0; margin-top: 15px; letter-spacing: 2px; }
+
+        /* History */
+        .history-section { max-width: 450px; margin: 40px auto; }
+        .history-card { background: white; padding: 16px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .load-btn { width: auto; padding: 8px 16px; background: #e4e4e7; color: #18181b; font-size: 14px; }
+
+        @media (max-width: 500px) { #label-to-export { transform: scale(0.7); transform-origin: top center; margin-bottom: -45mm; } }
     </style>
 </head>
 <body>
 
 <div class="form-container">
     <div class="field">
-        <label>OWNER / EVENT</label>
-        <input list="owners" id="ownerInput" oninput="updatePreview()">
+        <label>Owner / Event</label>
+        <input list="owners" id="ownerInput" oninput="updatePreview()" placeholder="e.g. KEVIN">
         <datalist id="owners"></datalist>
     </div>
     <div class="field">
-        <label>ROOM</label>
-        <input list="rooms" id="roomInput" oninput="updatePreview()">
+        <label>Room</label>
+        <input list="rooms" id="roomInput" oninput="updatePreview()" placeholder="e.g. KITCHEN">
         <datalist id="rooms"></datalist>
     </div>
-    <div class="field" style="display:flex; align-items:center; gap:12px; padding: 5px 0;">
+    <div class="field" style="display:flex; align-items:center; gap:12px; padding: 8px 0;">
         <input type="checkbox" id="fragileCheck" style="width:24px; height:24px;" onchange="updatePreview()">
-        <label for="fragileCheck" style="margin:0; color: #1e293b;">⚠️ MARK AS FRAGILE</label>
+        <label for="fragileCheck" style="margin:0; color: #18181b; font-size: 14px;">MARK AS FRAGILE</label>
     </div>
     <div class="field">
-        <label>BOX CONTENTS</label>
-        <textarea id="contentsInput" rows="3" oninput="updatePreview()"></textarea>
+        <label>Contents (Stored in QR)</label>
+        <textarea id="contentsInput" rows="3" oninput="updatePreview()" placeholder="List items..."></textarea>
     </div>
-    <button class="btn-main" id="btnAction" onclick="generatePDF()">Create & Save PDF</button>
+    <button class="btn-main" id="btnAction" onclick="generatePDF()">Generate & Save PDF</button>
 </div>
 
 <div class="preview-wrapper">
     <div id="label-to-export">
-        <div class="label-header">
-            <span id="out-owner">OWNER</span>
+        <div class="label-top-row">
+            <span id="out-owner">KEVIN</span>
             <span id="out-number">#1</span>
         </div>
-        <div class="label-room" id="out-room">ROOM</div>
-        <div id="out-contents" class="label-contents">Contents...</div>
+        
+        <div class="label-room-label">ROOM:</div>
+        <div id="out-room">KITCHEN</div>
+
+        <div class="content-layout">
+            <div id="qrcode"></div>
+            <div class="contents-box">
+                <div class="contents-header">CONTENTS:</div>
+                <div id="out-contents">Pots, pans, dishes...</div>
+            </div>
+        </div>
+
         <div id="out-fragile" class="fragile-banner">FRAGILE</div>
     </div>
 </div>
 
 <div class="history-section">
-    <h3>History</h3>
+    <h3 style="font-size: 14px; text-transform: uppercase; color: #71717a;">Recent Labels</h3>
     <div id="history-list"></div>
-    <button class="btn-danger" onclick="clearAllData()">Wipe All Saved Data</button>
+    <button style="background:none; color:#ef4444; font-size:12px; text-decoration:underline;" onclick="localStorage.clear(); location.reload();">Clear All Saved Data</button>
 </div>
 
 <script>
     let history = JSON.parse(localStorage.getItem('labelHistory') || '[]');
     let customOwners = JSON.parse(localStorage.getItem('customOwners') || '[]');
     let customRooms = JSON.parse(localStorage.getItem('customRooms') || '[]');
+    let qrcode = new QRCode(document.getElementById("qrcode"), { width: 150, height: 150, correctLevel : QRCode.CorrectLevel.M });
 
     function updateDatalists() {
         const defaults = {
@@ -96,13 +128,18 @@
     function updatePreview() {
         const owner = document.getElementById('ownerInput').value || 'OWNER';
         const room = document.getElementById('roomInput').value || 'ROOM';
-        const boxNum = history.filter(item => item.owner === owner && item.room === room).length + 1;
+        const contents = document.getElementById('contentsInput').value || 'Contents go here...';
+        const boxNum = history.filter(item => item.owner.toLowerCase() === owner.toLowerCase() && item.room.toLowerCase() === room.toLowerCase()).length + 1;
 
-        document.getElementById('out-owner').innerText = owner.toUpperCase();
-        document.getElementById('out-room').innerText = room.toUpperCase();
-        document.getElementById('out-contents').innerText = document.getElementById('contentsInput').value;
-        document.getElementById('out-number').innerText = "#" + boxNum;
+        document.getElementById('out-owner').innerText = owner;
+        document.getElementById('out-room').innerText = room;
+        document.getElementById('out-contents').innerText = contents;
+        document.getElementById('out-number').innerText = "BOX #" + boxNum;
         document.getElementById('out-fragile').style.display = document.getElementById('fragileCheck').checked ? 'block' : 'none';
+        
+        // Update QR Code
+        qrcode.clear();
+        qrcode.makeCode(contents);
     }
 
     async function generatePDF() {
@@ -113,54 +150,42 @@
         const owner = document.getElementById('ownerInput').value || 'STORAGE';
         const room = document.getElementById('roomInput').value || 'GENERAL';
         
-        // Save customs
         if(owner && !customOwners.includes(owner)) { customOwners.push(owner); localStorage.setItem('customOwners', JSON.stringify(customOwners)); }
         if(room && !customRooms.includes(room)) { customRooms.push(room); localStorage.setItem('customRooms', JSON.stringify(customRooms)); }
         updateDatalists();
 
-        const boxNum = history.filter(item => item.owner === owner && item.room === room).length + 1;
+        const boxNum = history.filter(item => item.owner.toLowerCase() === owner.toLowerCase() && item.room.toLowerCase() === room.toLowerCase()).length + 1;
         updatePreview();
 
         const element = document.getElementById('label-to-export');
-        
-        // Nelko-specific PDF settings
         const opt = {
             margin: 0,
             filename: `Box-${owner}-${boxNum}.pdf`,
             image: { type: 'jpeg', quality: 1 },
-            html2canvas: { 
-                scale: 4, 
-                logging: false, 
-                useCORS: true,
-                windowWidth: 385, // 102mm in pixels
-                windowHeight: 575 // 152mm in pixels
-            },
+            html2canvas: { scale: 4, useCORS: true, windowWidth: 385 },
             jsPDF: { unit: 'mm', format: [102, 152], orientation: 'portrait' }
         };
 
-        // Added delay to allow Safari to finish rendering text
         setTimeout(async () => {
             try {
                 await html2pdf().set(opt).from(element).save();
                 history.push({owner, room, boxNum, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked});
                 localStorage.setItem('labelHistory', JSON.stringify(history));
                 renderHistory();
-            } catch (e) {
-                alert("Generation failed. Please try again.");
-            }
-            btn.innerText = "Create & Save PDF";
+            } catch (e) { alert("Generation failed."); }
+            btn.innerText = "Generate & Save PDF";
             btn.disabled = false;
-        }, 300);
+        }, 500);
     }
 
     function renderHistory() {
         const list = document.getElementById('history-list');
-        list.innerHTML = history.length === 0 ? '<p style="color:#64748b">No history yet.</p>' : '';
-        history.slice().reverse().slice(0, 10).forEach((item, index) => {
+        list.innerHTML = history.length === 0 ? '<p style="font-size:12px; color:#a1a1aa;">No history yet.</p>' : '';
+        history.slice().reverse().slice(0, 5).forEach((item, index) => {
             const realIdx = history.length - 1 - index;
             const div = document.createElement('div');
             div.className = 'history-card';
-            div.innerHTML = `<div><strong>${item.owner}: ${item.room}</strong><br><span>Box #${item.boxNum}</span></div>
+            div.innerHTML = `<div><strong>${item.owner}</strong><br><span style="color:#71717a">${item.room} (#${item.boxNum})</span></div>
                              <button class="load-btn" onclick="loadLabel(${realIdx})">Reuse</button>`;
             list.appendChild(div);
         });
@@ -174,13 +199,6 @@
         document.getElementById('fragileCheck').checked = item.fragile;
         updatePreview();
         window.scrollTo({top: 0, behavior: 'smooth'});
-    }
-
-    function clearAllData() {
-        if(confirm("Delete all history and custom categories? This cannot be undone.")) {
-            localStorage.clear();
-            location.reload();
-        }
     }
 
     updateDatalists();
