@@ -23,7 +23,7 @@
         #label-to-export { 
             width: 102mm; height: 152mm; background: white; color: black;
             padding: 10mm; box-sizing: border-box; display: flex; flex-direction: column;
-            border: 1px solid #000;
+            border: 1px solid #000; position: relative; overflow: hidden;
         }
         
         .label-top-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 8px solid black; padding-bottom: 8px; }
@@ -33,21 +33,25 @@
         .label-room-label { font-size: 14px; font-weight: 800; margin-top: 15px; text-transform: uppercase; }
         #out-room { font-size: 48px; font-weight: 900; text-transform: uppercase; line-height: 1; margin-bottom: 10px; }
 
-        .content-layout { display: flex; gap: 15px; flex-grow: 1; align-items: flex-start; margin-top: 10px; overflow: hidden; }
+        .content-layout { display: flex; gap: 15px; flex-grow: 1; align-items: flex-start; margin-top: 10px; }
         #qrcode { width: 35mm; height: 35mm; flex-shrink: 0; background: white; }
         
-        .contents-box { flex-grow: 1; font-size: 18px; line-height: 1.2; overflow: hidden; }
+        .contents-box { flex-grow: 1; font-size: 18px; line-height: 1.2; }
         .contents-header { font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
         #out-contents { font-weight: 500; word-break: break-word; }
 
-        .fragile-banner { background: black; color: white; text-align: center; font-size: 52px; font-weight: 900; padding: 10px 0; margin-top: auto; }
+        /* Absolute positioning for Fragile to prevent rendering shifts */
+        .fragile-banner { 
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: black; color: white; text-align: center; 
+            font-size: 52px; font-weight: 900; padding: 10px 0; 
+        }
 
         /* HISTORY */
         .history-section { max-width: 450px; margin: 20px auto; }
         .history-card { background: white; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .load-btn { width: auto; padding: 6px 12px; background: #e4e4e7; font-size: 13px; }
 
-        /* Mobile Shrink (Visual Only) */
         @media (max-width: 500px) {
             .preview-wrapper { transform: scale(0.7); transform-origin: top center; height: 110mm; }
         }
@@ -74,7 +78,7 @@
         <label>Contents</label>
         <textarea id="contentsInput" rows="2" oninput="updatePreview()"></textarea>
     </div>
-    <button class="btn-main" id="btnAction" onclick="generatePDF()">Create & Save PDF</button>
+    <button class="btn-main" id="btnAction" onclick="generatePDF()">Preview & Open PDF</button>
 </div>
 
 <div class="preview-wrapper">
@@ -106,7 +110,6 @@
     let customOwners = JSON.parse(localStorage.getItem('customOwners') || '[]');
     let customRooms = JSON.parse(localStorage.getItem('customRooms') || '[]');
     
-    // Initialize QR code once
     const qrcodeContainer = document.getElementById("qrcode");
     let qr = new QRCode(qrcodeContainer, { width: 132, height: 132, correctLevel : QRCode.CorrectLevel.M });
 
@@ -131,16 +134,19 @@
         document.getElementById('out-number').innerText = "BOX #" + boxNum;
         document.getElementById('out-fragile').style.display = document.getElementById('fragileCheck').checked ? 'block' : 'none';
         
-        qr.makeCode(contents);
+        // QR Code now includes Owner and Box Number
+        const qrText = `OWNER: ${owner}\nBOX: #${boxNum}\nCONTENTS: ${contents}`;
+        qr.makeCode(qrText);
     }
 
     async function generatePDF() {
         const btn = document.getElementById('btnAction');
-        btn.innerText = "Rendering...";
+        btn.innerText = "Opening PDF...";
         btn.disabled = true;
 
         const owner = document.getElementById('ownerInput').value || 'OWNER';
         const room = document.getElementById('roomInput').value || 'ROOM';
+        const boxNumText = document.getElementById('out-number').innerText;
         
         if(owner && !customOwners.includes(owner)) { customOwners.push(owner); localStorage.setItem('customOwners', JSON.stringify(customOwners)); }
         if(room && !customRooms.includes(room)) { customRooms.push(room); localStorage.setItem('customRooms', JSON.stringify(customRooms)); }
@@ -152,23 +158,20 @@
             margin: 0,
             filename: `Box-${owner}-${room}.pdf`,
             image: { type: 'jpeg', quality: 1 },
-            html2canvas: { 
-                scale: 3, 
-                useCORS: true, 
-                letterRendering: true,
-                scrollX: 0,
-                scrollY: 0
-            },
+            html2canvas: { scale: 3, useCORS: true, letterRendering: true },
             jsPDF: { unit: 'mm', format: [102, 152], orientation: 'portrait' }
         };
 
-        // Delay helps iPhone Safari capture everything correctly
         setTimeout(() => {
-            html2pdf().set(opt).from(element).save().then(() => {
-                history.push({owner, room, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked, boxNum: document.getElementById('out-number').innerText});
+            // Use .output('bloburl') instead of .save()
+            html2pdf().set(opt).from(element).output('bloburl').then((pdfUrl) => {
+                window.open(pdfUrl, '_blank');
+                
+                history.push({owner, room, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked, boxNum: boxNumText});
                 localStorage.setItem('labelHistory', JSON.stringify(history));
                 renderHistory();
-                btn.innerText = "Create & Save PDF";
+                
+                btn.innerText = "Preview & Open PDF";
                 btn.disabled = false;
             }).catch(err => {
                 alert("Error. Please try again.");
