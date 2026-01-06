@@ -4,80 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thermal Label Creator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; --secondary: #64748b; }
-        body { font-family: system-ui, sans-serif; margin: 20px; background: var(--bg); color: #1e293b; }
+        :root { --primary: #2563eb; --bg: #f8fafc; }
+        body { font-family: system-ui, sans-serif; margin: 20px; background: var(--bg); padding-bottom: 100px; }
         
-        .form-container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .form-container { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .field { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
-        .checkbox-group input { width: auto; transform: scale(1.4); }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         
-        button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; }
-        .btn-clear { background: #ef4444; font-size: 14px; padding: 10px; margin-top: 20px; }
-
-        /* History Section */
-        .history-section { max-width: 500px; margin: 30px auto; }
-        .history-card { background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid var(--primary); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .load-btn { width: auto; padding: 8px 15px; font-size: 14px; background: var(--secondary); border:none; border-radius: 5px; color:white; }
-
-        /* Label Design (4x6) */
-        #label-output { 
-            display: none; width: 4in; height: 6in; border: 2px solid black; margin: auto; 
-            padding: 0.3in; box-sizing: border-box; background: white; flex-direction: column;
+        .btn-group { display: flex; gap: 10px; flex-direction: column; }
+        button { padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; }
+        .btn-main { background: var(--primary); color: white; }
+        
+        /* 102x152mm Label Design */
+        #label-to-export { 
+            width: 102mm; height: 152mm; 
+            background: white; color: black;
+            padding: 8mm; box-sizing: border-box;
+            display: flex; flex-direction: column;
+            border: 1px solid #eee; /* Light border for screen only */
+            margin: 20px auto;
         }
-        .label-header { display: flex; justify-content: space-between; border-bottom: 5px solid black; padding-bottom: 5px; font-size: 24px; font-weight: 900; text-transform: uppercase; }
-        .label-room { font-size: 36px; font-weight: 800; margin: 15px 0; }
-        .label-contents { font-size: 22px; flex-grow: 1; white-space: pre-wrap; line-height: 1.3; border: 1px solid #000; padding: 10px; }
-        .fragile-banner { background: black; color: white; text-align: center; font-size: 44px; font-weight: 900; padding: 10px; margin-top: 10px; }
 
-        @media print {
-            body * { visibility: hidden; }
-            #label-output, #label-output * { visibility: visible; }
-            #label-output { display: flex !important; position: absolute; left: 0; top: 0; width: 4in; height: 6in; border: none; }
-            @page { size: 4in 6in; margin: 0; }
-        }
+        .label-header { display: flex; justify-content: space-between; border-bottom: 8px solid black; padding-bottom: 5px; font-size: 32px; font-weight: 900; text-transform: uppercase; }
+        .label-room { font-size: 48px; font-weight: 800; margin: 20px 0; line-height: 1; }
+        .label-contents { font-size: 28px; flex-grow: 1; border: 4px solid black; padding: 15px; white-space: pre-wrap; margin-bottom: 10px; }
+        .fragile-banner { background: black; color: white; text-align: center; font-size: 50px; font-weight: 900; padding: 10px; }
+
+        /* Preview Image Area */
+        #image-preview-area { text-align: center; margin-top: 30px; }
+        #image-preview-area img { max-width: 90%; border: 2px solid #2563eb; border-radius: 8px; }
     </style>
 </head>
 <body>
 
 <div class="form-container">
-    <h2 style="margin:0 0 15px 0">Box Labeler</h2>
-    
     <div class="field">
         <label>Owner / Event</label>
-        <input list="owners" id="ownerInput" placeholder="Kevin, Christmas, etc.">
+        <input list="owners" id="ownerInput" placeholder="Kevin, Christmas...">
         <datalist id="owners"></datalist>
     </div>
-
     <div class="field">
         <label>Room</label>
-        <input list="rooms" id="roomInput" placeholder="Kitchen, Garage, etc.">
+        <input list="rooms" id="roomInput" placeholder="Kitchen, Garage...">
         <datalist id="rooms"></datalist>
     </div>
-
-    <div class="field checkbox-group">
-        <input type="checkbox" id="fragileCheck">
-        <label for="fragileCheck">⚠️ MARK AS FRAGILE</label>
+    <div class="field" style="display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="fragileCheck" style="width:25px; height:25px;">
+        <label for="fragileCheck">⚠️ FRAGILE</label>
     </div>
-
     <div class="field">
         <label>Contents</label>
-        <textarea id="contentsInput" rows="3" placeholder="List items here..."></textarea>
+        <textarea id="contentsInput" rows="3"></textarea>
     </div>
 
-    <button onclick="generateLabel()">Print Label</button>
+    <div class="btn-group">
+        <button class="btn-main" onclick="generateAndCapture()">Create Label Image</button>
+    </div>
 </div>
 
-<div class="history-section">
-    <h3>Session History</h3>
-    <div id="history-list"></div>
-    <button class="btn-clear" onclick="clearHistory()">Clear All Data</button>
-</div>
-
-<div id="label-output">
+<div id="label-to-export">
     <div class="label-header">
         <span id="out-owner">OWNER</span>
         <span id="out-number">#1</span>
@@ -87,108 +75,61 @@
     <div id="out-fragile" class="fragile-banner">FRAGILE</div>
 </div>
 
+<div id="image-preview-area">
+    <p id="instruction" style="display:none;"><strong>Long-press the image below to Save or Share to your Printer App:</strong></p>
+    <div id="image-container"></div>
+</div>
+
 <script>
-    // Initial Defaults
     const defaultOwners = ["Kevin", "Jenn", "Andrew", "Max", "Christmas", "Easter", "Halloween", "Fall", "Thanksgiving"];
     const defaultRooms = ["Living", "Kitchen", "Dining", "Bathroom", "Garage", "Bedroom", "Office", "Laundry"];
 
-    // State
     let history = JSON.parse(localStorage.getItem('labelHistory') || '[]');
     let customOwners = JSON.parse(localStorage.getItem('customOwners') || '[]');
     let customRooms = JSON.parse(localStorage.getItem('customRooms') || '[]');
 
     function updateDatalists() {
-        const ownerList = document.getElementById('owners');
-        const roomList = document.getElementById('rooms');
-        
-        // Combine defaults with user-saved custom entries
-        const allOwners = [...new Set([...defaultOwners, ...customOwners])];
-        const allRooms = [...new Set([...defaultRooms, ...customRooms])];
-
-        ownerList.innerHTML = allOwners.map(opt => `<option value="${opt}">`).join('');
-        roomList.innerHTML = allRooms.map(opt => `<option value="${opt}">`).join('');
+        document.getElementById('owners').innerHTML = [...new Set([...defaultOwners, ...customOwners])].map(o => `<option value="${o}">`).join('');
+        document.getElementById('rooms').innerHTML = [...new Set([...defaultRooms, ...customRooms])].map(r => `<option value="${r}">`).join('');
     }
 
-    function renderHistory() {
-        const list = document.getElementById('history-list');
-        list.innerHTML = history.length === 0 ? '<p style="color:#64748b">No recent labels.</p>' : '';
+    async function generateAndCapture() {
+        const owner = document.getElementById('ownerInput').value || 'STORAGE';
+        const room = document.getElementById('roomInput').value || 'GENERAL';
         
-        history.slice().reverse().forEach((item, index) => {
-            const realIndex = history.length - 1 - index;
-            const div = document.createElement('div');
-            div.className = 'history-card';
-            div.innerHTML = `
-                <div style="flex:1">
-                    <strong>${item.owner} - ${item.room} (#${item.boxNum})</strong><br>
-                    <small>${item.contents.substring(0, 30)}...</small>
-                </div>
-                <button class="load-btn" onclick="loadLabel(${realIndex})">Reuse</button>
-            `;
-            list.appendChild(div);
-        });
-    }
-
-    function generateLabel() {
-        const owner = document.getElementById('ownerInput').value.trim();
-        const room = document.getElementById('roomInput').value.trim();
-
-        if(!owner || !room) { alert("Please enter an Owner and a Room"); return; }
-
-        // 1. Save New Custom Options
-        if(!defaultOwners.includes(owner) && !customOwners.includes(owner)) {
-            customOwners.push(owner);
-            localStorage.setItem('customOwners', JSON.stringify(customOwners));
-        }
-        if(!defaultRooms.includes(room) && !customRooms.includes(room)) {
-            customRooms.push(room);
-            localStorage.setItem('customRooms', JSON.stringify(customRooms));
-        }
+        // Save customs
+        if(!defaultOwners.includes(owner) && !customOwners.includes(owner)) { customOwners.push(owner); localStorage.setItem('customOwners', JSON.stringify(customOwners)); }
+        if(!defaultRooms.includes(room) && !customRooms.includes(room)) { customRooms.push(room); localStorage.setItem('customRooms', JSON.stringify(customRooms)); }
         updateDatalists();
 
-        // 2. Logic for Box Number
         const boxNum = history.filter(item => item.owner === owner && item.room === room).length + 1;
 
-        const data = {
-            owner, room, boxNum,
-            contents: document.getElementById('contentsInput').value,
-            fragile: document.getElementById('fragileCheck').checked
-        };
+        // Update Label Text
+        document.getElementById('out-owner').innerText = owner;
+        document.getElementById('out-room').innerText = room;
+        document.getElementById('out-contents').innerText = document.getElementById('contentsInput').value;
+        document.getElementById('out-number').innerText = "#" + boxNum;
+        document.getElementById('out-fragile').style.display = document.getElementById('fragileCheck').checked ? 'block' : 'none';
 
-        // 3. Update UI & Print
-        document.getElementById('out-owner').innerText = data.owner;
-        document.getElementById('out-room').innerText = data.room;
-        document.getElementById('out-contents').innerText = data.contents;
-        document.getElementById('out-number').innerText = "BOX #" + data.boxNum;
-        document.getElementById('out-fragile').style.display = data.fragile ? 'block' : 'none';
-
-        history.push(data);
-        localStorage.setItem('labelHistory', JSON.stringify(history));
+        // Convert to Image
+        const labelEl = document.getElementById('label-to-export');
+        const canvas = await html2canvas(labelEl, { scale: 3 }); // High scale for crisp thermal printing
         
-        renderHistory();
-        window.print();
+        const imgData = canvas.toDataURL("image/png");
+        const container = document.getElementById('image-container');
+        container.innerHTML = `<img src="${imgData}" id="final-label-img">`;
+        document.getElementById('instruction').style.display = 'block';
+
+        // Save to history
+        history.push({owner, room, boxNum, contents: document.getElementById('contentsInput').value});
+        localStorage.setItem('labelHistory', JSON.stringify(history));
+
+        // Scroll to image
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
-    function loadLabel(index) {
-        const item = history[index];
-        document.getElementById('ownerInput').value = item.owner;
-        document.getElementById('roomInput').value = item.room;
-        document.getElementById('contentsInput').value = item.contents;
-        document.getElementById('fragileCheck').checked = item.fragile;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function clearHistory() {
-        if(confirm("Clear history and custom saved categories?")) {
-            localStorage.clear();
-            location.reload();
-        }
-    }
-
-    // Init
     updateDatalists();
-    renderHistory();
 </script>
 
 </body>
 </html>
-
