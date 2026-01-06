@@ -9,7 +9,6 @@
         :root { --primary: #2563eb; --bg: #f8fafc; --secondary: #64748b; }
         body { font-family: system-ui, sans-serif; margin: 20px; background: var(--bg); padding-bottom: 50px; }
         
-        /* Form Styling */
         .form-container { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .field { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
@@ -17,26 +16,21 @@
         
         button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; margin-top: 10px; }
         .btn-main { background: var(--primary); color: white; }
-        .btn-share { background: #059669; color: white; display: none; } /* Hidden until image exists */
 
-        /* History Section */
         .history-section { max-width: 450px; margin: 30px auto; }
-        .history-card { background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid var(--primary); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .history-card { background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid var(--primary); display: flex; justify-content: space-between; align-items: center; }
         .load-btn { width: auto; padding: 8px 15px; font-size: 14px; background: var(--secondary); margin: 0; color: white; }
 
-        /* Label Design (102x152mm) */
+        /* Off-screen Label Template (102x152mm) */
         #label-to-export { 
             width: 102mm; height: 152mm; background: white; color: black;
             padding: 8mm; box-sizing: border-box; display: flex; flex-direction: column;
-            position: absolute; left: -9999px; /* Hide off-screen so it doesn't double-up */
+            position: absolute; left: -9999px; top: 0;
         }
         .label-header { display: flex; justify-content: space-between; border-bottom: 8px solid black; padding-bottom: 5px; font-size: 32px; font-weight: 900; }
         .label-room { font-size: 48px; font-weight: 800; margin: 20px 0; }
         .label-contents { font-size: 28px; flex-grow: 1; border: 4px solid black; padding: 15px; white-space: pre-wrap; }
         .fragile-banner { background: black; color: white; text-align: center; font-size: 50px; font-weight: 900; padding: 10px; margin-top: 10px; }
-
-        /* Visible Preview */
-        #preview-img { max-width: 100%; border-radius: 8px; margin-top: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -61,14 +55,11 @@
         <textarea id="contentsInput" rows="3"></textarea>
     </div>
 
-    <button class="btn-main" onclick="generateAndCapture()">1. Generate Image</button>
-    <button id="shareButton" class="btn-share" onclick="shareLabel()">2. Share to Printer App</button>
+    <button class="btn-main" id="btnAction" onclick="generateAndShare()">Create & Share Label</button>
 </div>
 
-<div id="image-preview-area" style="text-align:center;"></div>
-
 <div class="history-section">
-    <h3>Session History</h3>
+    <h3>History</h3>
     <div id="history-list"></div>
 </div>
 
@@ -89,7 +80,6 @@
     let history = JSON.parse(localStorage.getItem('labelHistory') || '[]');
     let customOwners = JSON.parse(localStorage.getItem('customOwners') || '[]');
     let customRooms = JSON.parse(localStorage.getItem('customRooms') || '[]');
-    let currentBlob = null;
 
     function updateDatalists() {
         document.getElementById('owners').innerHTML = [...new Set([...defaultOwners, ...customOwners])].map(o => `<option value="${o}">`).join('');
@@ -109,7 +99,11 @@
         });
     }
 
-    async function generateAndCapture() {
+    async function generateAndShare() {
+        const btn = document.getElementById('btnAction');
+        btn.innerText = "Processing...";
+        btn.disabled = true;
+
         const owner = document.getElementById('ownerInput').value || 'STORAGE';
         const room = document.getElementById('roomInput').value || 'GENERAL';
         
@@ -120,39 +114,36 @@
 
         const boxNum = history.filter(item => item.owner === owner && item.room === room).length + 1;
         
+        // Populate Hidden Template
         document.getElementById('out-owner').innerText = owner;
         document.getElementById('out-room').innerText = room;
         document.getElementById('out-contents').innerText = document.getElementById('contentsInput').value;
         document.getElementById('out-number').innerText = "#" + boxNum;
         document.getElementById('out-fragile').style.display = document.getElementById('fragileCheck').checked ? 'block' : 'none';
 
+        // Convert to Image
         const canvas = await html2canvas(document.getElementById('label-to-export'), { scale: 3 });
         
-        // Display Preview
-        const container = document.getElementById('image-preview-area');
-        container.innerHTML = ''; // CLEAR PREVIOUS TO PREVENT DOUBLES
-        const img = new Image();
-        img.id = "preview-img";
-        img.src = canvas.toDataURL("image/png");
-        container.appendChild(img);
-
-        // Prepare for Sharing
-        canvas.toBlob(blob => { currentBlob = blob; document.getElementById('shareButton').style.display = 'block'; }, 'image/png');
-
-        // Update History
-        history.push({owner, room, boxNum, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked});
-        localStorage.setItem('labelHistory', JSON.stringify(history));
-        renderHistory();
-    }
-
-    async function shareLabel() {
-        if (!currentBlob) return;
-        const file = new File([currentBlob], "label.png", { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: 'Label', text: 'Thermal Label' });
-        } else {
-            alert("Sharing not supported on this browser. Long-press the image to save.");
-        }
+        canvas.toBlob(async (blob) => {
+            const file = new File([blob], `Label-${owner}-${boxNum}.png`, { type: "image/png" });
+            
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({ files: [file], title: 'Label' });
+                    // Only save to history if sharing was successful
+                    history.push({owner, room, boxNum, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked});
+                    localStorage.setItem('labelHistory', JSON.stringify(history));
+                    renderHistory();
+                } catch (err) {
+                    console.log("Share cancelled or failed");
+                }
+            } else {
+                alert("Browser does not support sharing files.");
+            }
+            
+            btn.innerText = "Create & Share Label";
+            btn.disabled = false;
+        }, 'image/png');
     }
 
     function loadLabel(idx) {
