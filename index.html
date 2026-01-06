@@ -131,6 +131,7 @@
         document.getElementById('out-number').innerText = "BOX #" + boxNum;
         document.getElementById('out-fragile').style.display = document.getElementById('fragileCheck').checked ? 'block' : 'none';
         
+        // FIXED: QR code now only includes the contents text
         qr.makeCode(contents);
     }
 
