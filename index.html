@@ -106,7 +106,6 @@
     let customOwners = JSON.parse(localStorage.getItem('customOwners') || '[]');
     let customRooms = JSON.parse(localStorage.getItem('customRooms') || '[]');
     
-    // Initialize QR code once
     const qrcodeContainer = document.getElementById("qrcode");
     let qr = new QRCode(qrcodeContainer, { width: 132, height: 132, correctLevel : QRCode.CorrectLevel.M });
 
@@ -120,12 +119,17 @@
     }
 
     function updatePreview() {
+        // We pull the raw value from the input. 
+        // Modern browsers handle the ' character fine when passed directly into innerText or makeCode.
         const owner = document.getElementById('ownerInput').value || 'OWNER';
         const room = document.getElementById('roomInput').value || 'ROOM';
-        // const contents = document.getElementById('contentsInput').value || 'Empty box';
-        const contents = document.getElementById('contentsInput').value.replace(/'/g, "\\'") || 'Empty box';
+        const contents = document.getElementById('contentsInput').value || 'Empty box';
 
-        const boxNum = history.filter(item => item.owner.toLowerCase() === owner.toLowerCase() && item.room.toLowerCase() === room.toLowerCase()).length + 1;
+        // History filtering is case-insensitive and handles special characters safely
+        const boxNum = history.filter(item => 
+            (item.owner || '').toLowerCase() === owner.toLowerCase() && 
+            (item.room || '').toLowerCase() === room.toLowerCase()
+        ).length + 1;
 
         document.getElementById('out-owner').innerText = owner;
         document.getElementById('out-room').innerText = room;
@@ -143,6 +147,9 @@
 
         const owner = document.getElementById('ownerInput').value || 'OWNER';
         const room = document.getElementById('roomInput').value || 'ROOM';
+        const currentContents = document.getElementById('contentsInput').value;
+        const currentBoxNum = document.getElementById('out-number').innerText;
+        const isFragile = document.getElementById('fragileCheck').checked;
         
         if(owner && !customOwners.includes(owner)) { customOwners.push(owner); localStorage.setItem('customOwners', JSON.stringify(customOwners)); }
         if(room && !customRooms.includes(room)) { customRooms.push(room); localStorage.setItem('customRooms', JSON.stringify(customRooms)); }
@@ -158,18 +165,19 @@
             jsPDF: { unit: 'mm', format: [102, 152], orientation: 'portrait' }
         };
 
+        // Standard timing to ensure the QR code updates before capture
         setTimeout(() => {
-            // CHANGE: Changed .save() to .output('bloburl') to open in a new tab
             html2pdf().set(opt).from(element).output('bloburl').then((pdfUrl) => {
                 window.open(pdfUrl, '_blank');
                 
-                history.push({owner, room, contents: document.getElementById('contentsInput').value, fragile: document.getElementById('fragileCheck').checked, boxNum: document.getElementById('out-number').innerText});
+                history.push({owner, room, contents: currentContents, fragile: isFragile, boxNum: currentBoxNum});
                 localStorage.setItem('labelHistory', JSON.stringify(history));
                 renderHistory();
                 
                 btn.innerText = "Create & Open PDF";
                 btn.disabled = false;
             }).catch(err => {
+                console.error(err);
                 alert("Error. Please try again.");
                 btn.disabled = false;
             });
