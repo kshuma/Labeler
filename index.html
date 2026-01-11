@@ -122,7 +122,9 @@
     function updatePreview() {
         const owner = document.getElementById('ownerInput').value || 'OWNER';
         const room = document.getElementById('roomInput').value || 'ROOM';
-        const contents = document.getElementById('contentsInput').value || 'Empty box';
+        // const contents = document.getElementById('contentsInput').value || 'Empty box';
+        const contents = document.getElementById('contentsInput').value.replace(/'/g, "\\'") || 'Empty box';
+
         const boxNum = history.filter(item => item.owner.toLowerCase() === owner.toLowerCase() && item.room.toLowerCase() === room.toLowerCase()).length + 1;
 
         document.getElementById('out-owner').innerText = owner;
